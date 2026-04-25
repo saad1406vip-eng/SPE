@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مستشار SPN الاحترافي للمساومة</title>
+    <style>
+        :root { --primary: #1a2a3a; --success: #27ae60; --danger: #e74c3c; --warning: #f1c40f; --bg: #f0f2f5; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); padding: 10px; margin: 0; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.15); }
+        h2 { text-align: center; color: var(--primary); border-bottom: 3px solid var(--success); padding-bottom: 10px; margin-bottom: 25px; }
+        .section { background: #f9f9f9; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #eee; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 14px; color: #444; }
+        select, input { width: 100%; padding: 14px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; margin-bottom: 10px; transition: 0.3s; }
+        select:focus, input:focus { border-color: var(--success); outline: none; }
+        .calc-type { display: flex; gap: 10px; margin-bottom: 15px; }
+        .calc-type label { flex: 1; background: #eee; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        input[type="radio"] { display: none; }
+        input[type="radio"]:checked + span { background: var(--success); color: white; display: block; padding: 10px; border-radius: 8px; width: 100%; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        button { width: 100%; padding: 18px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .result-card { margin-top: 25px; display: none; border-radius: 15px; overflow: hidden; border: 2px solid #eee; }
+        .box { padding: 15px; text-align: center; }
+        .dealer-box { background: #fff5f5; color: var(--danger); border-bottom: 1px solid #eee; }
+        .fair-box { background: #f5fff5; color: var(--success); }
+        .val { font-size: 26px; font-weight: 900; display: block; margin-top: 5px; }
+        .verdict { padding: 15px; text-align: center; font-weight: bold; color: white; font-size: 16px; }
+        .tips-box { margin-top: 15px; background: #fffde7; padding: 15px; border-radius: 10px; border-right: 5px solid var(--warning); font-size: 13px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>SPN Negotiator | مستشار المساومة 🛠️</h2>
+
+    <div class="section">
+        <label>1. اختر ما تريد شراءه:</label>
+        <select id="mainCat" onchange="initSubCat()">
+            <option value="">-- القائمة الرئيسية --</option>
+            <option value="kitchen">مطابخ (بولي لاك، ألمنيوم، إلخ)</option>
+            <option value="tiles">بلاط وسيراميك وبورسلان</option>
+            <option value="floors">باركيه وموكيت</option>
+            <option value="furniture">كنب وأطقم جلوس</option>
+            <option value="bedroom">غرف نوم ودواليب</option>
+        </select>
+        <select id="subCat"></select>
+    </div>
+
+    <div class="section">
+        <label>2. طريقة تسعير المحل:</label>
+        <div class="calc-type">
+            <label><input type="radio" name="calcMode" value="m2" checked> <span>بالمتر المربع</span></label>
+            <label><input type="radio" name="calcMode" value="m1"> <span>بالمتر الطولي</span></label>
+        </div>
+        
+        <div class="grid">
+            <div>
+                <label>الطول (م):</label>
+                <input type="number" id="L" placeholder="0.0" step="0.1">
+            </div>
+            <div id="heightInput">
+                <label>الارتفاع/العرض (م):</label>
+                <input type="number" id="H" placeholder="0.0" step="0.1" value="1.0">
+            </div>
+        </div>
+    </div>
+
+    <div class="section" style="background: #e3f2fd;">
+        <label>3. سعر المتر اللي قاله التاجر:</label>
+        <input type="number" id="unitPrice" placeholder="أدخل السعر هنا">
+    </div>
+
+    <button onclick="analyze()">حلل السعر الآن</button>
+
+    <div id="resultCard" class="result-card">
+        <div class="box dealer-box">
+            <span>إجمالي حسبة التاجر:</span>
+            <span class="val" id="dTotal">0 ريال</span>
+        </div>
+        <div class="box fair-box">
+            <span>السعر العادل المقترح (SPN):</span>
+            <span class="val" id="fTotal">0 ريال</span>
+        </div>
+        <div id="verdict" class="verdict"></div>
+    </div>
+
+    <div id="tips" class="tips-box" style="display:none;"></div>
+</div>
+
+<script>
+    // قاعدة بيانات الأسعار العادلة (متوسط السوق السعودي 2026 جودة ممتازة)
+    const fairPrices = {
+        kitchen: {
+            "بولي لاك (Polylac)": { m2: 1200, m1: 3000, tip: "تأكد أن المفصلات هيدروليك والرخام صناعي نخب أول." },
+            "ستانلس ستيل 304": { m2: 1450, m1: 3800, tip: "تأكد من سماكة الستانلس واللحامات المخفية." },
+            "ألمنيوم كلادينج": { m2: 1000, m1: 2200, tip: "اطلب حشوة فايبر أبيض وليس كرتون." }
+        },
+        tiles: {
+            "بورسلان إسباني": { m2: 160, m1: 160, tip: "افحص استواء البلاطة واشترط تركيب بـ 'فواصل'." },
+            "برسلان هندي نخب أول": { m2: 75, m1: 75, tip: "تأكد من مطابقة رقم الدفعة (Batch Number) لجميع الكراتين." }
+        },
+        floors: {
+            "باركيه ألماني": { m2: 65, m1: 65, tip: "السعر يجب أن يشمل النعلات واللباد والتركيب." },
+            "موكيت تركي": { m2: 95, m1: 280, tip: "اسأل عن كثافة الغرز (Stitch count) لضمان عدم الهبوط." }
+        },
+        furniture: {
+            "كنب متصل (مودرن)": { m2: 450, m1: 850, tip: "تأكد أن الإسفنج ضغط 40 والخشب سويدي." }
+        },
+        bedroom: {
+            "دولاب ملابس خشب": { m2: 1000, m1: 2500, tip: "الحساب المربع أدق للدواليب الواصلة للسقف." }
+        }
+    };
+
+    function initSubCat() {
+        const cat = document.getElementById("mainCat").value;
+        const sub = document.getElementById("subCat");
+        sub.innerHTML = "";
+        if(fairPrices[cat]) {
+            Object.keys(fairPrices[cat]).forEach(k => {
+                let op = document.createElement("option");
+                op.value = k; op.text = k; sub.appendChild(op);
+            });
+        }
+    }
+
+    function analyze() {
+        const cat = document.getElementById("mainCat").value;
+        const sub = document.getElementById("subCat").value;
+        const mode = document.querySelector('input[name="calcMode"]:checked').value;
+        const L = parseFloat(document.getElementById("L").value) || 0;
+        const H = parseFloat(document.getElementById("H").value) || 1;
+        const uPrice = parseFloat(document.getElementById("unitPrice").value) || 0;
+
+        if(!cat || L === 0 || uPrice === 0) { alert("أدخل البيانات كاملة"); return; }
+
+        // حسبة التاجر
+        let dTotal = (mode === "m2") ? (L * H * uPrice) : (L * uPrice);
+        
+        // حسبة SPN (السعر العادل)
+        let fUnitPrice = fairPrices[cat][sub][mode];
+        let fTotal = (mode === "m2") ? (L * H * fUnitPrice) : (L * fUnitPrice);
+
+        document.getElementById("resultCard").style.display = "block";
+        document.getElementById("dTotal").innerText = Math.round(dTotal).toLocaleString() + " ريال";
+        document.getElementById("fTotal").innerText = Math.round(fTotal).toLocaleString() + " ريال";
+
+        const verd = document.getElementById("verdict");
+        const diff = dTotal - fTotal;
+
+        if(diff > (fTotal * 0.15)) {
+            verd.innerText = "⚠️ التاجر غالي! السعر مبالغ فيه بحوالي " + Math.round((diff/fTotal)*100) + "%";
+            verd.style.background = var(--danger);
+        } else {
+            verd.innerText = "✅ السعر ممتاز ومطابق لمواصفات الجودة.";
+            verd.style.background = var(--success);
+        }
+
+        const tips = document.getElementById("tips");
+        tips.innerHTML = "<b>💡 نصيحة SPN:</b> " + fairPrices[cat][sub].tip;
+        tips.style.display = "block";
+    }
+</script>
+</body>
+</html>
