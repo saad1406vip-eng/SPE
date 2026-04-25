@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مستشار SPN للمساومة الذكية</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #e74c3c; --success: #27ae60; --bg: #f8f9fa; }
+        body { font-family: 'Tahoma', sans-serif; background: var(--bg); padding: 10px; margin: 0; }
+        .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: var(--primary); font-size: 20px; margin-bottom: 20px; border-bottom: 2px solid var(--success); padding-bottom: 10px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; color: #555; }
+        select, input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; background: #fff; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 15px; cursor: pointer; transition: 0.3s; }
+        button:active { transform: scale(0.98); }
+        .result-box { margin-top: 20px; display: none; border-radius: 10px; overflow: hidden; border: 1px solid #ddd; }
+        .res-header { padding: 10px; text-align: center; font-weight: bold; color: white; }
+        .dealer-price { background: #fdf2f2; padding: 15px; border-bottom: 1px solid #eee; }
+        .fair-price { background: #f2fdf5; padding: 15px; }
+        .val { font-size: 22px; font-weight: bold; display: block; }
+        .status-msg { padding: 10px; text-align: center; font-weight: bold; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>SPN Smart Negotiator 🧠</h2>
+
+    <div class="input-group">
+        <label>القسم (ماذا تريد أن تشتري؟):</label>
+        <select id="mainCat" onchange="initSubCat()">
+            <option value="">-- اختر القسم --</option>
+            <option value="kitchen">مطبخ (ألمنيوم/بولي لاك/خشب)</option>
+            <option value="tiles">بلاط (سيراميك/بورسلان/رخام)</option>
+            <option value="floors">أرضيات (باركيه/موكيت)</option>
+            <option value="walls">ديكور جدران (ورق/جبس)</option>
+            <option value="furniture">أثاث (كنب/غرف نوم/دواليب)</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label>نوع المادة المحددة:</label>
+        <select id="subCat"></select>
+    </div>
+
+    <div class="grid">
+        <div class="input-group">
+            <label id="unitLabel">الطول (م):</label>
+            <input type="number" id="length" placeholder="0.0" step="0.1">
+        </div>
+        <div class="input-group" id="heightGroup">
+            <label>الارتفاع/العرض (م):</label>
+            <input type="number" id="height" placeholder="0.0" step="0.1">
+        </div>
+    </div>
+
+    <div class="input-group" style="background: #fff9c4; padding: 10px; border-radius: 8px;">
+        <label style="color: #856404;">سعر المتر الذي أعطاك إياه التاجر:</label>
+        <input type="number" id="dealerUnitPrice" placeholder="ادخل السعر هنا">
+        <div style="margin-top:5px; font-size:12px;">
+            <input type="radio" name="uType" value="m2" checked> متر مربع 
+            <input type="radio" name="uType" value="m"> متر طولي
+        </div>
+    </div>
+
+    <button onclick="comparePrices()">قارن وحلل السعر الآن</button>
+
+    <div id="resultBox" class="result-box">
+        <div class="dealer-price">
+            <span style="color: #c0392b;">حسبة التاجر الإجمالية:</span>
+            <span class="val" id="dealerTotal">0 ريال</span>
+        </div>
+        <div class="fair-price">
+            <span style="color: #27ae60;">السعر العادل المرجعي (SPN):</span>
+            <span class="val" id="fairTotal">0 ريال</span>
+        </div>
+        <div id="statusMsg" class="status-msg"></div>
+    </div>
+</div>
+
+<script>
+    const db = {
+        kitchen: {
+            "بولي لاك": 1200, "ستانلس 304": 1450, "ألمنيوم كلادينج": 1050, "أكريليك": 950
+        },
+        tiles: {
+            "بورسلان إسباني": 160, "سيراميك هندي": 45, "رخام عماني": 180, "برسلان إماراتي": 85
+        },
+        floors: {
+            "باركيه ألماني": 65, "باركيه صيني": 45, "موكيت تركي": 90, "فينيل": 40
+        },
+        walls: {
+            "ورق جدران كوري": 35, "جبس بورد سادة": 60, "بديل رخام": 120, "دهان جوتن": 45
+        },
+        furniture: {
+            "كنب متصل": 850, "دولاب ملابس (م2)": 1000, "سرير كينج": 2500
+        }
+    };
+
+    function initSubCat() {
+        const cat = document.getElementById("mainCat").value;
+        const sub = document.getElementById("subCat");
+        sub.innerHTML = "";
+        if(db[cat]) {
+            Object.keys(db[cat]).forEach(k => {
+                let op = document.createElement("option");
+                op.value = k; op.text = k; sub.appendChild(op);
+            });
+        }
+    }
+
+    function comparePrices() {
+        const cat = document.getElementById("mainCat").value;
+        const sub = document.getElementById("subCat").value;
+        const L = parseFloat(document.getElementById("length").value) || 0;
+        const H = parseFloat(document.getElementById("height").value) || 1;
+        const dUnitPrice = parseFloat(document.getElementById("dealerUnitPrice").value) || 0;
+        const uType = document.querySelector('input[name="uType"]:checked').value;
+
+        if(!cat || L === 0 || dUnitPrice === 0) { alert("أكمل البيانات أولاً"); return; }
+
+        // حسبة التاجر
+        let dTotal = (uType === "m2") ? (L * H * dUnitPrice) : (L * dUnitPrice);
+        
+        // حسبة SPN العادلة (نفترض المتر المربع كمعيار في الكود)
+        let fUnitPrice = db[cat][sub];
+        let fTotal = (uType === "m2") ? (L * H * fUnitPrice) : (L * fUnitPrice);
+
+        document.getElementById("resultBox").style.display = "block";
+        document.getElementById("dealerTotal").innerText = Math.round(dTotal).toLocaleString() + " ريال";
+        document.getElementById("fairTotal").innerText = Math.round(fTotal).toLocaleString() + " ريال";
+
+        const msg = document.getElementById("statusMsg");
+        const diff = dTotal - fTotal;
+        
+        if (diff > (fTotal * 0.1)) {
+            msg.innerText = "❌ السعر مرتفع! حاول المساومة أو ابحث عن محل آخر.";
+            msg.style.background = "#ffebee"; msg.style.color = "#c62828";
+        } else {
+            msg.innerText = "✅ السعر عادل ومنطقي.. توكل على الله.";
+            msg.style.background = "#e8f5e9"; msg.style.color = "#2e7d32";
+        }
+    }
+</script>
+</body>
+</html>
